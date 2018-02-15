@@ -7,7 +7,7 @@ How to?
 -------
 
  1. Generate github personal access: <https://github.com/blog/1509-personal-api-tokens>
-    This application does not requires any specific access.
+    This application does not requires any specific access
  2. Get [OVH Functions client](https://docs.functions.ovh)
  3. Export credentials to your environment
     ```bash
@@ -36,3 +36,16 @@ How to?
     ```bash
     ovh-functions logs github_watch
     ```
+
+### Collect results
+
+ 1. Install a webserver which will receive 1 POST request for each result
+    I recommend [ElasticSearch](https://www.elastic.co/fr/products/elasticsearch)
+ 2. Configure `POST_URL` in the `functions.yml` file
+ 3. Export your credentials:
+    ```bash
+    export POST_CREDENTIALS="user:my-password"
+    ```
+ 4. Deploy the function one more time
+
+/!\ Your webserver must be accessible over the Internet, so please use a basic authentication in the url
