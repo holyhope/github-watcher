@@ -40,11 +40,10 @@ How to?
 ### Collect results
 
  1. Install a webserver which will receive 1 POST request for each result
-    I recommend [ElasticSearch](https://www.elastic.co/fr/products/elasticsearch)
- 2. Configure `POST_URL` in the `functions.yml` file
- 3. Export your credentials:
+    I recommend [ElasticSearch](https://www.elastic.co/fr/products/elasticsearch), but you can also use [requestb.in](https://requestb.in) for dev purpose.
+ 2. Configure `POST_URL` variable:
     ```bash
-    export POST_CREDENTIALS="user:my-password"
+    export POST_URL="https://use:password@elasticsearch:9200/github-watcher/result"
     ```
  4. Deploy the function one more time
 

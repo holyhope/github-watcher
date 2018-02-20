@@ -11,22 +11,35 @@ read -r -d '' TEMPLATE <<EOF
 	issuesOpened: .issues.opened | length
 }
 EOF
-
 GITHUB_DATE_FORMAT='+%Y-%m-%dT%H:%M:%S'
-
-[ -z "$INTERVAL_EXEC_HOURS" ] && echo "variable INTERVAL_EXEC_HOURS not set" >&2 && exit 1
-
 REPOSITORIES_FILE="repositories.txt"
-CURL="curl -u ${USERNAME}:${API_TOKEN}"
 
-function fetch() {
-	REPOSITORY=$($CURL -sS "https://api.github.com/repos/$1")
+function github() {
+	curl -sS -u ${USERNAME}:${API_TOKEN} "$@"
+}
 
-	# MACOS: SINCE=$(date -v-${INTERVAL_EXEC_HOURS}d "$GITHUB_DATE_FORMAT")
-	SINCE=$(date --date="-${INTERVAL_EXEC_HOURS} hour" "$GITHUB_DATE_FORMAT")
+function init_function() {
+	if [ -z "$INTERVAL_EXEC_HOURS" ] ; then
+		echo "variable INTERVAL_EXEC_HOURS not set" >&2
+		exit 1
+	fi
+}
 
-	ISSUES_SOLVED=$($CURL -sS "https://api.github.com/repos/$1/issues?state=closed&since=$SINCE")
-	ISSUES_OPENED=$($CURL -sS "https://api.github.com/repos/$1/issues?state=open&since=$SINCE")
+function get_since() {
+	if [ "${OSTYPE:0:6}" == "darwin" ] ; then
+		date -v"-${1}H" "$GITHUB_DATE_FORMAT"
+	else
+		date --date="-$1 hour" "$GITHUB_DATE_FORMAT"
+	fi
+}
+
+function github_fetch() {
+	REPOSITORY=$(github "https://api.github.com/repos/$1")
+
+	SINCE=$(get_since ${INTERVAL_EXEC_HOURS})
+
+	ISSUES_SOLVED=$(github "https://api.github.com/repos/$1/issues?state=closed&since=$SINCE")
+	ISSUES_OPENED=$(github "https://api.github.com/repos/$1/issues?state=open&since=$SINCE")
 
 	read -r -d '' RESULT <<EOF
 {
@@ -37,17 +50,30 @@ function fetch() {
 	}
 }
 EOF
-	echo $RESULT >&2
 	echo $RESULT | jq "$TEMPLATE"
 }
 
+function push_result() {
+	if [ -n "$POST_URL" ] ; then
+		return curl --fail -sS -H 'Content-Type:application/json' -d "$1" "$POST_URL"
+	fi
+}
+
+function fetch_and_store() {
+	RESULT="$(github_fetch "$1")"
+	echo $RESULT >&2
+	push_result "$RESULT" >&2
+}
+
 function run() {
-	if [ -z "$1" ] ; then
-		while IFS='' read -r repo || [[ -n "$repo" ]]; do
-			RESULT=$(fetch "$repo" 2> /dev/null) && \
-			[ -z "$POST_URL" ] || curl -sS -H 'Content-Type:application/json' -d "$RESULT" "$POST_URL" &
-		done < "$REPOSITORIES_FILE"
+	init_function
+
+	if [ -n "$1" ] ; then
+		fetch_and_store "$repo"
 	else
-		fetch "$1"
+		repositories=$(cat "$REPOSITORIES_FILE")
+		for repo in $repositories ; do
+			fetch_and_store "$repo"
+		done
 	fi
 }

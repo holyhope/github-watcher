@@ -6,7 +6,7 @@ functions:
       INTERVAL_EXEC_HOURS: 24
       USERNAME: "${env:USERNAME}"
       API_TOKEN: "${env:API_TOKEN}"
-      POST_URL: "https://${POST_CREDENTIALS}@elasticsearch:9200/github-watcher/result"
+      POST_URL: "${env:POST_URL}"
 #    events:
 #      - schedule:
 #          rate: cron(0 0 * * *)
